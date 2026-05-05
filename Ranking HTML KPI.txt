@@ -1,0 +1,71 @@
+Ranking HTML KPI = 
+-- ==================================================================================
+-- CONFIGURAÇÕES DO USUÁRIO 
+-- ==================================================================================
+VAR _Titulo      = "Ranking"                         -- Título principal
+VAR _Submeta     = "Mês Atual"                       -- Texto secundário (ex: Mês, Meta, etc)
+VAR _Dimensao    = VALUES( 'SuaTabela'[SuaColuna] )  -- Coluna que será listada
+VAR _Medida      = [SuaMedida]                       -- Medida de valor
+-- ==================================================================================
+
+-- 1. DADOS: Preparação da tabela virtual
+VAR __dados =
+    ADDCOLUMNS(
+        _Dimensao,
+        "@v", _Medida
+    )
+
+-- 2. MONTAGEM DAS LINHAS
+VAR __linhas =
+    CONCATENATEX(
+        __dados,
+        VAR pos = RANKX( __dados, [@v],, DESC )
+        VAR medalha =
+            SWITCH( pos,
+                1, "🥇",
+                2, "🥈",
+                3, "🥉",
+                FORMAT( pos, "0" )
+            )
+        VAR corMedalha = IF( pos <= 3, "#F59E0B", "#64748B" )
+        VAR valorFmt = FORMAT( [@v], "#,##0" ) 
+        
+        -- Captura o nome da linha de forma dinâmica
+        VAR nomeItem = SELECTCOLUMNS(SAMPLE(1, __dados, [@v], ASC), "Nome", [SuaColuna]) 
+        
+        RETURN
+        "<div style='display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.05);'>" &
+          "<span style='font-size:14px; width:30px; min-width:30px; text-align:center; color:" & corMedalha & "; font-weight:700;'>" & medalha & "</span>" &
+          "<span style='flex:1; color:#444444; font-size:12px; font-weight:500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: Segoe UI, sans-serif;'>" & nomeItem & "</span>" &
+          "<span style='font-weight:700; color:#242424; font-size:12px; font-variant-numeric: tabular-nums; font-family: Segoe UI, sans-serif;'>" & valorFmt & "</span>" &
+        "</div>",
+        "",
+        [@v], DESC
+    )
+
+-- 3. RETORNO: Estrutura HTML Completa
+RETURN
+"<div style='font-family: ""Segoe UI Semibold"", ""Segoe UI"", sans-serif; 
+             box-sizing: border-box; 
+             width: 100%; 
+             height: 100%; 
+             position: fixed; 
+             top: 0; left: 0;
+             background: transparent; 
+             border: none; 
+             padding: 10px 0; 
+             display: flex; 
+             flex-direction: column;'> " &
+
+  -- Header (Título 14px e Submeta 11px)
+  "<div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; flex-shrink: 0; padding: 0 10px;'> " &
+    "<span style='font-size:14px; color:#242424; font-family: ""Segoe UI Semibold"", sans-serif;'>" & _Titulo & "</span>" &
+    "<span style='font-size:11px; color:#94A3B8; font-family: Segoe UI, sans-serif;'>" & _Submeta & "</span>" &
+  "</div>" &
+
+  -- Área de Conteúdo (Lista com Scroll)
+  "<div style='flex: 1; overflow-y: auto; padding: 0 10px; font-family: Segoe UI, sans-serif;'> " & 
+    __linhas & 
+  "</div>" &
+
+"</div>"
